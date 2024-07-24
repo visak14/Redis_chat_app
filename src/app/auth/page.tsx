@@ -1,7 +1,13 @@
 import React from 'react'
 import AuthButton from './AuthButton'
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server'
+import { redirect } from 'next/navigation';
 
-const page = () => {
+ export default async function page () {
+
+    const { isAuthenticated} = getKindeServerSession();
+  if ( await isAuthenticated()) return redirect("/auth");
+
   return (
     <div className=' flex h-screen w-full'>
 
@@ -21,7 +27,7 @@ const page = () => {
                 <AuthButton/>
             </div>
         </div>
-        <div className=' flex-1 relative overflow-hidden justify-center items-center hidden md:flex '>
+        <div className=' flex-1 relative overflow-hidden justify-center items-center hidden md:flex bg-noise '>
 
         <img
             src={'/hero-right.png'}
@@ -34,4 +40,3 @@ const page = () => {
   )
 }
 
-export default page

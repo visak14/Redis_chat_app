@@ -1,14 +1,38 @@
 import { messages, USERS } from '@/db/dummy'
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import {AnimatePresence, motion} from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarImage } from '../ui/avatar'
+import { useSelectedUser } from '@/store/useSelectedUser'
+import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs'
+import { useQuery } from '@tanstack/react-query'
+import { getMessages } from '@/actions/message.action'
+import MessageContainer from './MessageContainer'
+import MessageSkeleton from '../skeletons/MessageSkeleton'
 const MessageList = () => {
-    const selectedUser = USERS[0]
-    const currentUser = USERS[1]
+    const {selectedUser }= useSelectedUser();
+    const {user:currentUser, isLoading:isUserLoading} = useKindeBrowserClient();
+    const MessageContainerRef = useRef<HTMLDivElement>(null)
+
+    const {data:messages, isLoading: isMessagesLoading} = useQuery({
+        queryKey:["messages", selectedUser?.id],
+        queryFn: async () => {
+            if(selectedUser && currentUser) {
+                return await getMessages(selectedUser?.id , currentUser?.id)
+            }
+        },
+        enabled: !!selectedUser && !!currentUser &&  !isUserLoading
+    })
+
+    useEffect(() => {
+        if(MessageContainerRef.current) {
+            MessageContainerRef.current.scrollTop = MessageContainerRef.current.scrollHeight;
+        }
+    }, [messages])
   return (
+    <div ref={MessageContainerRef} className=' w-full overflow-y-auto overflow-x-hidden h-full flex flex-col'>
    <AnimatePresence>
-    {messages.map((message, idx) => (
+    { !isMessagesLoading &&  messages?.map((message, idx) => (
         <motion.div
         key={idx}
         layout
@@ -28,14 +52,14 @@ const MessageList = () => {
             originY:0.5
         }}
         className={cn( " flex flex-col gap-2 p-4 whitespace-pre-wrap",
-            message.senderId === currentUser.id ? "items-end " :" items-start"
+            message.senderId === currentUser?.id ? "items-end " :" items-start"
         )}
         >
        <div className=' flex gap-3 items-center'>
-          {message.senderId === selectedUser.id &&  (
+          {message.senderId === selectedUser?.id &&  (
             <Avatar>
                 <AvatarImage
-                   src={selectedUser.image}
+                   src={selectedUser?.image}
                    alt='User Image'
                    className=' border-2 border-white rounded-full'
                 />
@@ -54,10 +78,10 @@ const MessageList = () => {
                 />
             ) }
 
-{message.senderId === currentUser.id &&  (
+{message.senderId === currentUser?.id &&  (
             <Avatar>
                 <AvatarImage
-                   src={currentUser.image}
+                   src={currentUser?.picture || "/user-placeholder.png"}
                    alt='User Image'
                    className=' border-2 border-white rounded-full'
                 />
@@ -67,7 +91,16 @@ const MessageList = () => {
        </div>
         </motion.div>
     ))}
+
+    {isMessagesLoading &&  (
+        <>
+        <MessageSkeleton/>
+        <MessageSkeleton/>
+        <MessageSkeleton/>
+        </>
+    )}
    </AnimatePresence>
+   </div>
   )
 }
 
